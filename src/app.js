@@ -1,210 +1,94 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
 
-// Middlewares
+// --- CONFIGURAÇÃO DO MULTER ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'public/uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage });
+
+// --- MIDDLEWARES ---
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Dados mock (animais para teste)
-const mockAnimals = [
-  {
-    id: 1,
-    name: "teste",
-    species: "cachorro",
-    breed: "Vira-lata",
-    age: 2,
-    ageUnit: "anos",
-    size: "médio",
-    gender: "macho",
-    description: "Um doguinho muito brincalhão e carinhoso! Adora passeios e brincar com bolinha.",
-    photos: ["https://images.dog.ceo/breeds/mix/n02110185_1469.jpg"],
-    personality: ["brincalhão", "carinhoso", "ativo"],
-    healthInfo: { vaccinated: true, dewormed: true, castrated: true },
-    requirements: ["Espaço para correr", "Passeios diários"]
-  },{
-    id: 2,
-    name: "teas",
-    species: "cachorro",
-    breed: "Vira-lata",
-    age: 2,
-    ageUnit: "anos",
-    size: "médio",
-    gender: "macho",
-    description: "Um doguinho muito brincalhão e carinhoso! Adora passeios e brincar com bolinha.",
-    photos: ["https://images.dog.ceo/breeds/mix/n02110185_1469.jpg"],
-    personality: ["brincalhão", "carinhoso", "ativo"],
-    healthInfo: { vaccinated: true, dewormed: true, castrated: true },
-    requirements: ["Espaço para correr", "Passeios diários"]
-  },{
-    id: 3,
-    name: "teasdas",
-    species: "cachorro",
-    breed: "Vira-lata",
-    age: 2,
-    ageUnit: "anos",
-    size: "médio",
-    gender: "macho",
-    description: "Um doguinho muito brincalhão e carinhoso! Adora passeios e brincar com bolinha.",
-    photos: ["https://images.dog.ceo/breeds/mix/n02110185_1469.jpg"],
-    personality: ["brincalhão", "carinhoso", "ativo"],
-    healthInfo: { vaccinated: true, dewormed: true, castrated: true },
-    requirements: ["Espaço para correr", "Passeios diários"]
-  },{
-    id: 4,
-    name: "Rteadadwex",
-    species: "cachorro",
-    breed: "Vira-lata",
-    age: 2,
-    ageUnit: "anos",
-    size: "médio",
-    gender: "macho",
-    description: "Um doguinho muito brincalhão e carinhoso! Adora passeios e brincar com bolinha.",
-    photos: ["https://images.dog.ceo/breeds/mix/n02110185_1469.jpg"],
-    personality: ["brincalhão", "carinhoso", "ativo"],
-    healthInfo: { vaccinated: true, dewormed: true, castrated: true },
-    requirements: ["Espaço para correr", "Passeios diários"]
-  },
-  // Você pode adicionar mais animais aqui
+// --- BANCO DE DADOS MOCK ---
+let mockAnimals = [
+  { id: 1, name: "Rex", species: "Cachorro", photos: [`http://192.168.0.103:3000/public/uploads/rex.jpg`] },
+  { id: 2, name: "Luna", species: "Gato", photos: [`http://192.168.0.103:3000/public/uploads/luna.jpg`] }
 ];
 
-const mockUsers = [
-  {
-    id: 1,
-    name: "João Silva",
-    email: "joao@email.com",
-    matches: [1] // IDs dos animais que já deram match
-  },
-  // Você pode adicionar mais usuários aqui
+let mockAdminChats = [
+    { id: 'chat1', petName: 'Rex', userName: 'Ana Carolina', lastMessage: 'Olá! Tenho interesse em adotar o Rex.', timestamp: 'há 2 horas', unread: true, status: 'active' },
+    { id: 'chat2', petName: 'Luna', userName: 'Marcos Paulo', lastMessage: 'Gostaria de saber mais sobre a Luna.', timestamp: 'há 5 horas', unread: false, status: 'pending' },
 ];
 
-// Rotas principais
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'API Pet Adoption funcionando! 🐾',
-    version: '1.0.0',
-    status: '✅ ONLINE',
-    endpoints: {
-      home: '/',
-      health: '/health', 
-      animals: '/api/animals',
-      animalDetail: '/api/animals/:id',
-      matches: '/api/matches',
-      like: '/api/animals/:id/like',
-      dislike: '/api/animals/:id/dislike'
-    }
-  });
-});
+let mockMatchRequests = [
+    { id: 'req1', userName: 'Ana Carolina', userImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop', petName: 'Bolinha', petImage: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=100&h=100&fit=crop', timestamp: '2 horas atrás' },
+    { id: 'req2', userName: 'Marcos Paulo', userImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop', petName: 'Frajola', petImage: 'https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?w=100&h=100&fit=crop', timestamp: '5 horas atrás' },
+];
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'Pet Adoption API'
-  });
-});
+// --- ROTAS ---
 
-// API de animais
-app.get('/api/animals', (req, res) => {
-  res.json({
-    success: true,
-    count: mockAnimals.length,
-    animals: mockAnimals
-  });
-});
+app.get('/', (req, res) => res.json({ message: 'API Pet Adoption funcionando!' }));
 
+// --- API DE ANIMAIS (CRUD) ---
+app.get('/api/animals', (req, res) => res.json({ success: true, animals: mockAnimals }));
 app.get('/api/animals/:id', (req, res) => {
-  const animalId = parseInt(req.params.id);
-  const animal = mockAnimals.find(a => a.id === animalId);
-  
-  if (animal) {
-    res.json({ success: true, animal });
-  } else {
-    res.status(404).json({ success: false, message: 'Animal não encontrado' });
-  }
+  const animal = mockAnimals.find(a => a.id === parseInt(req.params.id));
+  if (animal) res.json({ success: true, animal });
+  else res.status(404).json({ success: false, message: 'Animal não encontrado' });
 });
 
-// Rota de like (curtir animal e criar match)
-app.post('/api/animals/:id/like', (req, res) => {
-  const animalId = parseInt(req.params.id);
-  const { userId } = req.body;
-
-  const animal = mockAnimals.find(a => a.id === animalId);
-  if (!animal) {
-    return res.status(404).json({ success: false, message: 'Animal não encontrado' });
-  }
-
-  const user = mockUsers.find(u => u.id === userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
-  }
-
-  // Adiciona match no usuário (se ainda não existir)
-  if (!user.matches.includes(animalId)) {
-    user.matches.push(animalId);
-  }
-
-  const newMatch = {
-    id: Date.now(),
-    userId,
-    animalId,
-    timestamp: new Date().toISOString(),
-    status: 'pending'
-  };
-
-  res.json({
-    success: true,
-    match: newMatch,
-    message: 'Match criado com sucesso! 💖'
-  });
+app.post('/api/animals', upload.array('photos', 5), (req, res) => {
+    const petInfo = req.body;
+    const photoPaths = req.files ? req.files.map(file => `http://192.168.0.103:3000/public/uploads/${file.filename}`) : [];
+    const newPet = { ...petInfo, id: Date.now(), age: parseInt(petInfo.age, 10), photos: photoPaths, status: 'Disponível' };
+    mockAnimals.push(newPet);
+    res.status(201).json({ success: true, message: 'Pet cadastrado!', pet: newPet });
 });
 
-// Rota de dislike (não curtir animal)
-app.post('/api/animals/:id/dislike', (req, res) => {
-  const animalId = parseInt(req.params.id);
-  const { userId } = req.body;
-
-  const animal = mockAnimals.find(a => a.id === animalId);
-  if (!animal) {
-    return res.status(404).json({ success: false, message: 'Animal não encontrado' });
-  }
-
-  const user = mockUsers.find(u => u.id === userId);
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
-  }
-
-  // Remove o animal dos matches do usuário (se existir)
-  user.matches = user.matches.filter(matchId => matchId !== animalId);
-
-  res.json({
-    success: true,
-    message: 'Dislike registrado com sucesso! ✅',
-    data: {
-      animalId,
-      userId,
-      timestamp: new Date().toISOString(),
-      action: 'dislike'
+app.put('/api/animals/:id', upload.array('photos', 5), (req, res) => {
+    const petIndex = mockAnimals.findIndex(p => p.id === parseInt(req.params.id));
+    if (petIndex > -1) {
+        Object.assign(mockAnimals[petIndex], req.body);
+        if (req.files && req.files.length > 0) {
+            mockAnimals[petIndex].photos = req.files.map(file => `http://192.168.0.103:3000/public/uploads/${file.filename}`);
+        }
+        res.json({ success: true, message: 'Pet atualizado!', pet: mockAnimals[petIndex] });
+    } else {
+        res.status(404).json({ success: false, message: 'Animal não encontrado' });
     }
-  });
 });
 
-// API de matches por usuário
-app.get('/api/matches/:userId', (req, res) => {
-  const userId = parseInt(req.params.userId);
-  const userMatches = mockUsers.find(u => u.id === userId)?.matches || [];
-  
-  const matches = userMatches.map(matchId => {
-    const animal = mockAnimals.find(a => a.id === matchId);
-    return {
-      matchId,
-      animal,
-      matchedAt: new Date().toISOString()
-    };
-  });
-  
-  res.json({ success: true, matches });
+app.delete('/api/animals/:id', (req, res) => {
+    const initialLength = mockAnimals.length;
+    mockAnimals = mockAnimals.filter(p => p.id !== parseInt(req.params.id));
+    if (mockAnimals.length < initialLength) res.json({ success: true, message: 'Pet removido!' });
+    else res.status(404).json({ success: false, message: 'Animal não encontrado' });
+});
+
+// ROTA PARA AS SOLICITAÇÕES
+app.get('/api/match-requests', (req, res) => {
+    res.json({ success: true, requests: mockMatchRequests });
+});
+
+// Rota para buscar conversas do admin
+app.get('/api/chats/admin', (req, res) => {
+    res.json({ success: true, chats: mockAdminChats });
+});
+
+// Login do Admin (simulado)
+app.post('/api/admin/login', (req, res) => {
+    const { email, password } = req.body;
+    if (email && password) res.json({ success: true, message: 'Login bem-sucedido!' });
+    else res.status(400).json({ success: false, message: 'Email e senha são obrigatórios.' });
 });
 
 module.exports = app;
